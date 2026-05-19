@@ -20,21 +20,30 @@ if ($query === '') {
 }
 
 if ($direction === 'ep') {
-  $sql = 'SELECT id, pal, eng, pos, pdef
-          FROM all_words3
-          WHERE eng LIKE ?
-          ORDER BY pal
-          LIMIT 30';
+  $col = 'eng';
 } else {
-  $sql = 'SELECT id, pal, eng, pos, pdef
-          FROM all_words3
-          WHERE pal LIKE ?
-          ORDER BY pal
-          LIMIT 30';
+  $col = 'pal';
 }
 
+$sql = "SELECT id, pal, eng, pos, pdef
+        FROM all_words3
+        WHERE $col LIKE ?
+        ORDER BY
+          CASE
+            WHEN $col = ? THEN 1
+            WHEN $col LIKE ? THEN 2
+            ELSE 3
+          END,
+          $col
+        LIMIT 30";
+
 $stmt = $pdo->prepare($sql);
-$stmt->execute(['%' . $query . '%']);
+$stmt->execute([
+  '%' . $query . '%',
+  $query,
+  $query . '%'
+]);
+
 $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 echo json_encode($results);
