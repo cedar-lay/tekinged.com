@@ -19,6 +19,7 @@ $sql = 'SELECT pal, eng, pos, pdef
         AND eng != ""
         AND pos != "var."
         AND pos != "cont."
+        AND (vulgar IS NULL OR vulgar = 0 OR vulgar = 2)
         ORDER BY RAND()
         LIMIT 1';
 
