@@ -429,21 +429,23 @@ function find_fuzzy($pdo, $input, $column) {
 
 // Build WHERE clause matching John's get_all_entries2() / make_search_col()
 // Uses word-boundary regexp matching (\b equivalent in MySQL: [[:<:]] [[:>:]])
-$safe = $pdo->quote($query);
-$safe_inner = trim($safe, "'");
+
+$safe_like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $query) . '%';
+$safe_like_stmt = $pdo->prepare(
+  $direction === 'pp'
+    ? "SELECT id, stem, pos, pal FROM all_words3 WHERE pal LIKE ? OR pdef LIKE ?"
+    : ($direction === 'ep'
+        ? "SELECT id, stem, pos, pal FROM all_words3 WHERE eng LIKE ?"
+        : "SELECT id, stem, pos, pal FROM all_words3 WHERE pal LIKE ?")
+);
 
 if ($direction === 'pp') {
-  $where = "WHERE pal REGEXP '[[:<:]]" . $safe_inner . "[[:>:]]'
-            OR pdef REGEXP '[[:<:]]" . $safe_inner . "[[:>:]]'";
-} else if ($direction === 'ep') {
-  $where = "WHERE eng REGEXP '[[:<:]]" . $safe_inner . "[[:>:]]'";
+  $safe_like_stmt->execute([$safe_like, $safe_like]);
 } else {
-  $where = "WHERE pal REGEXP '[[:<:]]" . $safe_inner . "[[:>:]]'";
+  $safe_like_stmt->execute([$safe_like]);
 }
 
-$initial_sql = "SELECT id, stem, pos, pal FROM all_words3 $where";
-$initial_stmt = $pdo->query($initial_sql);
-$initial_rows = $initial_stmt->fetchAll(PDO::FETCH_ASSOC);
+$initial_rows = $safe_like_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // ============================================================
 // If no results, return fuzzy suggestions
