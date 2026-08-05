@@ -244,16 +244,11 @@ function merge_variants($root, $subwords) {
 // ============================================================
 
 function get_examples($pdo, $stem_id, $word_pals) {
-  // Build WHERE clause matching John's extraQuery logic:
-  // match by word appearing in palauan column OR by stem field
-  $conditions = ['stem = :stem_id'];
-  $params = [':stem_id' => $stem_id];
-  $i = 0;
+  $conditions = ['stem = ?'];
+  $params = [$stem_id];
   foreach (array_slice($word_pals, 0, 15) as $pal) {
-    $key = ':pal' . $i;
-    $conditions[] = "lower(palauan) regexp lower(:regex$i)";
-    $params[':regex' . $i] = '[[:<:]]' . preg_quote($pal, '/') . '[[:>:]]';
-    $i++;
+    $conditions[] = "lower(palauan) LIKE lower(?)";
+    $params[] = '%' . $pal . '%';
   }
   $where = implode(' OR ', $conditions);
   $sql = "SELECT id, palauan, english FROM examples WHERE $where ORDER BY RAND() LIMIT 5";
@@ -280,13 +275,11 @@ function get_examples($pdo, $stem_id, $word_pals) {
 // ============================================================
 
 function get_proverbs($pdo, $stem_id, $word_pals) {
-  $conditions = ['stem = :stem_id'];
-  $params = [':stem_id' => $stem_id];
-  $i = 0;
+  $conditions = ['stem = ?'];
+  $params = [$stem_id];
   foreach (array_slice($word_pals, 0, 15) as $pal) {
-    $conditions[] = "lower(palauan) regexp lower(:regex$i)";
-    $params[':regex' . $i] = '[[:<:]]' . preg_quote($pal, '/') . '[[:>:]]';
-    $i++;
+    $conditions[] = "lower(palauan) LIKE lower(?)";
+    $params[] = '%' . $pal . '%';
   }
   $where = implode(' OR ', $conditions);
   $sql = "SELECT id, palauan, english, explanation FROM proverbs WHERE $where ORDER BY RAND() LIMIT 5";
@@ -314,13 +307,11 @@ function get_proverbs($pdo, $stem_id, $word_pals) {
 // ============================================================
 
 function get_sentences($pdo, $stem_id, $word_pals) {
-  $conditions = ['stem = :stem_id'];
-  $params = [':stem_id' => $stem_id];
-  $i = 0;
+  $conditions = ['stem = ?'];
+  $params = [$stem_id];
   foreach (array_slice($word_pals, 0, 15) as $pal) {
-    $conditions[] = "lower(palauan) regexp lower(:regex$i)";
-    $params[':regex' . $i] = '[[:<:]]' . preg_quote($pal, '/') . '[[:>:]]';
-    $i++;
+    $conditions[] = "lower(palauan) LIKE lower(?)";
+    $params[] = '%' . $pal . '%';
   }
   $where = implode(' OR ', $conditions);
   $sql = "SELECT id, palauan, eng FROM upload_sentence WHERE $where ORDER BY RAND() LIMIT 5";
