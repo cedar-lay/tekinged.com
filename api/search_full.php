@@ -468,7 +468,7 @@ if (count($initial_rows) === 0) {
 // ============================================================
 
 $group = true;
-if (count($initial_rows) > 20) {
+if (count($initial_rows) > 200) {
   $group = false;
 }
 
