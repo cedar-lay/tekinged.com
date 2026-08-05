@@ -364,33 +364,6 @@ function get_cfs($pdo, $stem_id, $word_ids) {
 }
 
 // ============================================================
-// HELPER: get synonyms for an entry
-// ============================================================
-
-function get_synonyms($pdo, $stem_id) {
-  $sql = "SELECT s.word FROM synonyms AS s
-          WHERE s.mygrouping IN (
-            SELECT s2.mygrouping FROM synonyms AS s2 WHERE s2.word = ?
-          )
-          AND s.word != ?";
-  $stmt = $pdo->prepare($sql);
-  $stmt->execute([$stem_id, $stem_id]);
-  $rows = $stmt->fetchAll(PDO::FETCH_COLUMN);
-
-  $syns = [];
-  foreach ($rows as $syn_id) {
-    $q2 = $pdo->prepare("SELECT pal FROM all_words3 WHERE id = ?");
-    $q2->execute([$syn_id]);
-    $row = $q2->fetch(PDO::FETCH_ASSOC);
-    if ($row) {
-      $syns[] = ['id' => $syn_id, 'pal' => strtoupper($row['pal'])];
-    }
-  }
-  usort($syns, fn($a, $b) => strcasecmp($a['pal'], $b['pal']));
-  return $syns;
-}
-
-// ============================================================
 // HELPER: fuzzy search — find closest matching words
 // Used when search returns no results
 // ============================================================
@@ -552,7 +525,6 @@ foreach ($initial_rows as $row) {
   $proverbs  = get_proverbs($pdo, $stem_id, $word_pals);
   $sentences = get_sentences($pdo, $stem_id, $word_pals);
   $cfs       = get_cfs($pdo, $stem_id, $word_ids);
-  $synonyms  = get_synonyms($pdo, $stem_id);
 
   $entries[$stem_id] = [
     'root'      => $root,
@@ -561,7 +533,7 @@ foreach ($initial_rows as $row) {
     'proverbs'  => $proverbs,
     'sentences' => $sentences,
     'cfs'       => $cfs,
-    'synonyms'  => $synonyms,
+    'synonyms'  => [],
   ];
 }
 
