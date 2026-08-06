@@ -19,6 +19,54 @@
 
 require_once __DIR__ . '/../db_config.php';
 
+// ------------------------------------------------------------------
+// CORS + session setup
+// Runs automatically whenever this file is require'd, so none of the
+// endpoint files need to repeat it.
+// ------------------------------------------------------------------
+
+function send_cors_headers() {
+    // Add any other domains that will call this API (e.g. your live
+    // tekinged.com domain once you go live) to this list.
+    $allowed_origins = [
+        'https://tekinged.webflow.io',
+        'https://tekinged.com',
+        'https://www.tekinged.com',
+        'https://staging.tekinged.com',
+    ];
+
+    if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins, true)) {
+        header('Access-Control-Allow-Origin: ' . $_SERVER['HTTP_ORIGIN']);
+        header('Access-Control-Allow-Credentials: true');
+    }
+    header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type');
+
+    // Browsers sometimes send a preflight OPTIONS request first —
+    // just acknowledge it and stop, no real work to do.
+    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+        http_response_code(204);
+        exit;
+    }
+}
+
+function start_quiz_session() {
+    // SameSite=None + Secure is required for the session cookie to be
+    // sent back on cross-domain requests (Webflow -> staging server).
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path'     => '/',
+        'secure'   => true,
+        'httponly' => true,
+        'samesite' => 'None',
+    ]);
+    session_start();
+}
+
+send_cors_headers();
+start_quiz_session();
+header('Content-Type: application/json');
+
 $mysqli = new mysqli($db_host, $db_user, $db_pwd, $database);
 if ($mysqli->connect_errno) {
     http_response_code(500);
