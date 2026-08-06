@@ -13,9 +13,6 @@
  */
 
 require_once __DIR__ . '/quiz_classes.php';
-session_start();
-
-header('Content-Type: application/json');
 
 $status = new Quiz();
 $question = generate_question($mysqli, $status);
