@@ -20,9 +20,6 @@
  */
 
 require_once __DIR__ . '/quiz_classes.php';
-session_start();
-
-header('Content-Type: application/json');
 
 $name = isset($_POST['name']) ? trim($_POST['name']) : (isset($_GET['name']) ? trim($_GET['name']) : '');
 
