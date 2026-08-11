@@ -37,11 +37,16 @@ if ($query === '') {
 // The simple word mp3s live at SITE_ROOT/mp3s/WORD.mp3
 // ============================================================
 
-function has_word_audio($pal) {
-  $path = $_SERVER['DOCUMENT_ROOT'] . '/mp3s/' . $pal . '.mp3';
-  // Also check m4a
-  $path_m4a = $_SERVER['DOCUMENT_ROOT'] . '/mp3s/' . $pal . '.m4a';
-  return file_exists($path) || file_exists($path_m4a);
+function has_word_audio($id) {
+  $base = $_SERVER['DOCUMENT_ROOT'] . '/uploads/mp3s/all_words3.pal/' . $id;
+  return file_exists($base . '.mp3') || file_exists($base . '.m4a');
+}
+
+function get_word_audio_url($id) {
+  $base = '/uploads/mp3s/all_words3.pal/' . $id;
+  if (file_exists($_SERVER['DOCUMENT_ROOT'] . $base . '.mp3')) return $base . '.mp3';
+  if (file_exists($_SERVER['DOCUMENT_ROOT'] . $base . '.m4a')) return $base . '.m4a';
+  return null;
 }
 
 // ============================================================
@@ -54,10 +59,11 @@ function has_extra_audio($type, $id) {
     'example'         => 'examples.palauan',
     'proverb'         => 'proverbs.palauan',
     'upload_sentence' => 'upload_sentence.palauan',
+    'pdef'            => 'all_words3.pdef',
   ];
   if (!isset($subdirs[$type])) return false;
-  $path = $_SERVER['DOCUMENT_ROOT'] . '/uploads/mp3s/' . $subdirs[$type] . '/' . $id . '.mp3';
-  return file_exists($path);
+  $base = $_SERVER['DOCUMENT_ROOT'] . '/uploads/mp3s/' . $subdirs[$type] . '/' . $id;
+  return file_exists($base . '.mp3') || file_exists($base . '.m4a');
 }
 
 // ============================================================
@@ -69,9 +75,13 @@ function get_extra_audio_url($type, $id) {
     'example'         => 'examples.palauan',
     'proverb'         => 'proverbs.palauan',
     'upload_sentence' => 'upload_sentence.palauan',
+    'pdef'            => 'all_words3.pdef',
   ];
   if (!isset($subdirs[$type])) return null;
-  return '/uploads/mp3s/' . $subdirs[$type] . '/' . $id . '.mp3';
+  $base = '/uploads/mp3s/' . $subdirs[$type] . '/' . $id;
+  if (file_exists($_SERVER['DOCUMENT_ROOT'] . $base . '.mp3')) return $base . '.mp3';
+  if (file_exists($_SERVER['DOCUMENT_ROOT'] . $base . '.m4a')) return $base . '.m4a';
+  return null;
 }
 
 // ============================================================
@@ -464,8 +474,8 @@ foreach ($initial_rows as $row) {
     'pos'       => $root_row['pos'],
     'pdef'      => $root_row['pdef'],
     'origin'    => get_origin_label($root_row['origin'], $root_row['oword']),
-    'has_audio' => has_word_audio($root_row['pal']),
-    'audio_url' => has_word_audio($root_row['pal']) ? '/mp3s/' . $root_row['pal'] . '.mp3' : null,
+    'has_audio' => has_word_audio($root_row['id']),
+    'audio_url' => get_word_audio_url($root_row['id']),
     'is_root'   => true,
     'stem'      => $root_row['stem'],
   ];
@@ -507,8 +517,10 @@ foreach ($initial_rows as $row) {
       'pos'       => $br['pos'],
       'pdef'      => $br['pdef'],
       'origin'    => get_origin_label($br['origin'], $br['oword']),
-      'has_audio' => has_word_audio($br['pal']),
-      'audio_url' => has_word_audio($br['pal']) ? '/mp3s/' . $br['pal'] . '.mp3' : null,
+      'has_audio' => has_word_audio($br['id']),
+      'audio_url' => get_word_audio_url($br['id']),
+      'has_pdef_audio' => has_extra_audio('pdef', $br['id']),
+      'pdef_audio_url' => get_extra_audio_url('pdef', $br['id']),
     ];
     $word_ids[]  = $br['id'];
     $word_pals[] = $br['pal'];
