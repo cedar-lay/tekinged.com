@@ -104,6 +104,30 @@ function pic_url_for_id($id) {
     return null;
 }
 
+/**
+ * Checks for simple word audio (e.g. alii.mp3), matching the convention
+ * described in the technical docs: files live at DOCUMENT_ROOT/mp3s/WORD.mp3
+ * (or .m4a), named after the exact Palauan word text.
+ *
+ * NOTE: the original has_word_audio() implementation isn't in the functions.php
+ * excerpt available here, so this is a best-effort port of the documented
+ * convention. If filenames use different sanitization (lowercase, no
+ * diacritics, underscores for spaces, etc.), this may need adjusting to match
+ * exactly how the real mp3s/ files are named once that folder is on staging.
+ */
+function word_audio_url($word) {
+    if (!$word) {
+        return null;
+    }
+    $dir = $_SERVER['DOCUMENT_ROOT'] . '/mp3s/';
+    foreach (['mp3', 'm4a'] as $ext) {
+        if (file_exists($dir . $word . '.' . $ext)) {
+            return '/mp3s/' . rawurlencode($word) . '.' . $ext;
+        }
+    }
+    return null;
+}
+
 // ---- Read the requested list ----
 $lookup = $_GET['lookup'] ?? null;
 if (!$lookup) {
@@ -144,6 +168,7 @@ if ($method === 'words') {
         json_error('Query failed: ' . $mysqli->error, 500);
     }
     while ($row = $result->fetch_assoc()) {
+        $audio_url = word_audio_url($row['pal']);
         $entries[] = [
             'id'     => $row['id'],
             'pic'    => null,
@@ -154,6 +179,8 @@ if ($method === 'words') {
             'root'   => null,
             'has_image' => false,
             'has_root'  => false,
+            'has_audio' => $audio_url !== null,
+            'audio_url' => $audio_url,
         ];
     }
 } else {
@@ -173,6 +200,7 @@ if ($method === 'words') {
     }
     while ($row = $result->fetch_assoc()) {
         $pic_url = pic_url_for_id($row['Pic']);
+        $audio_url = word_audio_url($row['Palauan']);
         $entries[] = [
             'id'        => $row['Pic'],
             'pic'       => $pic_url,
@@ -183,14 +211,30 @@ if ($method === 'words') {
             'root'      => $row['RootWord'],
             'has_image' => $pic_url !== null,
             'has_root'  => true,
+            'has_audio' => $audio_url !== null,
+            'audio_url' => $audio_url,
         ];
     }
 }
 
+// Column-level visibility flags: hide a column's header entirely (not just
+// individual cells) when NOTHING in this particular list has that data.
+$has_any_image = false;
+$has_any_root = false;
+$has_any_audio = false;
+foreach ($entries as $e) {
+    if ($e['has_image']) { $has_any_image = true; }
+    if ($e['has_root'] && $e['root']) { $has_any_root = true; }
+    if ($e['has_audio']) { $has_any_audio = true; }
+}
+
 echo json_encode([
-    'lookup'  => $lookup,
-    'label'   => $label,
-    'entries' => $entries,
+    'lookup'        => $lookup,
+    'label'         => $label,
+    'has_any_image' => $has_any_image,
+    'has_any_root'  => $has_any_root,
+    'has_any_audio' => $has_any_audio,
+    'entries'       => $entries,
 ]);
 
 $mysqli->close();
