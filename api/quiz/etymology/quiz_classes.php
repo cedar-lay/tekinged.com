@@ -196,7 +196,7 @@ class EtymologyQuestion {
  */
 function generate_etymology_question($mysqli, $quiz) {
     $q_q = "select pal,eng,id,stem,origin from all_words3 " .
-           "where not isnull(origin) and length(origin)=1 order by rand() limit 1;";
+           "where not isnull(origin) and length(origin)=1 and origin != 'K' order by rand() limit 1;";
     $r = query_or_die($mysqli, $q_q);
     $row = $r->fetch_assoc();
 
