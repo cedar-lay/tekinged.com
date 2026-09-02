@@ -92,37 +92,43 @@ function pics_dir() {
     return '/uploads/pics';
 }
 
-function pic_url_for_id($id) {
-    if (!is_numeric($id)) {
+/**
+ * Picture existence is checked via the `pictures` DB table (allwid, uploaded)
+ * rather than file_exists() on disk. This is necessary because the actual
+ * .jpg files currently live only on the LIVE production server
+ * (tekinged.com/uploads/pics/{id}.jpg), not on staging where this API runs —
+ * a filesystem check against DOCUMENT_ROOT would always fail here. The
+ * $interesting array's 'pictures' entry itself uses this same table/column
+ * to build its own wordlist, confirming this is the authoritative way to
+ * know whether a word has an uploaded picture.
+ *
+ * $pictured_ids is a lookup set (id => true) built once per request from
+ * `SELECT allwid FROM pictures WHERE uploaded = 1`, populated below after
+ * the DB connection is opened.
+ */
+function pic_url_for_id($id, $pictured_ids) {
+    if (!is_numeric($id) || !isset($pictured_ids[$id])) {
         return null;
     }
-    $pdir = $_SERVER['DOCUMENT_ROOT'] . pics_dir();
-    $pic_path = $pdir . '/' . $id . '.jpg';
-    if (file_exists($pic_path)) {
-        return pics_dir() . '/' . $id . '.jpg';
-    }
-    return null;
+    return pics_dir() . '/' . $id . '.jpg';
 }
 
 /**
- * Checks for simple word audio (e.g. alii.mp3), matching the convention
- * described in the technical docs: files live at DOCUMENT_ROOT/mp3s/WORD.mp3
- * (or .m4a), named after the exact Palauan word text.
- *
- * NOTE: the original has_word_audio() implementation isn't in the functions.php
- * excerpt available here, so this is a best-effort port of the documented
- * convention. If filenames use different sanitization (lowercase, no
- * diacritics, underscores for spaces, etc.), this may need adjusting to match
- * exactly how the real mp3s/ files are named once that folder is on staging.
+ * Checks for simple word audio using the ID-based convention that's actually
+ * working in production (confirmed via the dictionary Results page: 'alii',
+ * id 7110, plays from uploads/mp3s/all_words3.pal/7110.mp3). This replaces
+ * an earlier word-text-based guess that matched stray leftover files from an
+ * older, unused naming convention.
  */
-function word_audio_url($word) {
-    if (!$word) {
+function word_audio_url($id) {
+    if (!is_numeric($id)) {
         return null;
     }
-    $dir = $_SERVER['DOCUMENT_ROOT'] . '/mp3s/';
+    $subdir = 'all_words3.pal';
+    $base = $_SERVER['DOCUMENT_ROOT'] . '/uploads/mp3s/' . $subdir . '/' . $id;
     foreach (['mp3', 'm4a'] as $ext) {
-        if (file_exists($dir . $word . '.' . $ext)) {
-            return '/mp3s/' . rawurlencode($word) . '.' . $ext;
+        if (file_exists($base . '.' . $ext)) {
+            return '/uploads/mp3s/' . $subdir . '/' . $id . '.' . $ext;
         }
     }
     return null;
@@ -155,6 +161,17 @@ if ($mysqli->connect_error) {
     json_error('Database connection failed', 500);
 }
 
+// Build the set of word IDs that have an uploaded picture, per the `pictures`
+// table (same source the 'pictures' wordlist entry itself relies on). One
+// query for the whole request instead of a filesystem check per row.
+$pictured_ids = [];
+$pics_result = $mysqli->query("SELECT allwid FROM pictures WHERE uploaded = 1");
+if ($pics_result) {
+    while ($prow = $pics_result->fetch_row()) {
+        $pictured_ids[$prow[0]] = true;
+    }
+}
+
 $entries = [];
 
 if ($method === 'words') {
@@ -168,7 +185,7 @@ if ($method === 'words') {
         json_error('Query failed: ' . $mysqli->error, 500);
     }
     while ($row = $result->fetch_assoc()) {
-        $audio_url = word_audio_url($row['pal']);
+        $audio_url = word_audio_url($row['id']);
         $entries[] = [
             'id'     => $row['id'],
             'pic'    => null,
@@ -199,8 +216,8 @@ if ($method === 'words') {
         json_error('Query failed: ' . $mysqli->error, 500);
     }
     while ($row = $result->fetch_assoc()) {
-        $pic_url = pic_url_for_id($row['Pic']);
-        $audio_url = word_audio_url($row['Palauan']);
+        $pic_url = pic_url_for_id($row['Pic'], $pictured_ids);
+        $audio_url = word_audio_url($row['Pic']); // Pic column is aliased from a.id
         $entries[] = [
             'id'        => $row['Pic'],
             'pic'       => $pic_url,
