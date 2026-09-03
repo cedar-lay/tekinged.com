@@ -31,17 +31,10 @@ require_once __DIR__ . '/../../db_config.php';
 // ------------------------------------------------------------------
 
 function send_cors_headers() {
-    $allowed_origins = [
-        'https://tekinged.webflow.io',
-        'https://tekinged.com',
-        'https://www.tekinged.com',
-        'https://staging.tekinged.com',
-    ];
-
-    if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins, true)) {
-        header('Access-Control-Allow-Origin: ' . $_SERVER['HTTP_ORIGIN']);
-        header('Access-Control-Allow-Credentials: true');
-    }
+    // No cookies are used by this API (see start_quiz_session() below),
+    // so a wildcard origin is safe here and avoids maintaining an
+    // allow-list as the site moves between domains.
+    header('Access-Control-Allow-Origin: *');
     header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
     header('Access-Control-Allow-Headers: Content-Type');
 
@@ -52,13 +45,27 @@ function send_cors_headers() {
 }
 
 function start_quiz_session() {
-    session_set_cookie_params([
-        'lifetime' => 0,
-        'path'     => '/',
-        'secure'   => true,
-        'httponly' => true,
-        'samesite' => 'None',
-    ]);
+    // Avoid relying on cookies entirely: some mobile browsers (notably
+    // iOS Safari/WebKit, and anything built on it like iOS Chrome/Firefox)
+    // block third-party cookies between a Webflow-hosted page and this API
+    // domain, which silently breaks the whole quiz. Instead, the client
+    // generates/stores a session token itself and sends it explicitly on
+    // every request; we use it directly as the PHP session ID rather than
+    // transporting it via a cookie at all.
+    $token = isset($_POST['session_token']) ? $_POST['session_token'] : (isset($_GET['session_token']) ? $_GET['session_token'] : null);
+
+    // Only accept a well-formed token (PHP session ids are alphanumeric,
+    // optionally with "," or "-").
+    if ($token && preg_match('/^[a-zA-Z0-9,-]{20,64}$/', $token)) {
+        session_id($token);
+    }
+    // else: no valid token supplied — PHP generates a fresh one below,
+    // which quiz_start.php reads via session_id() and returns to the client.
+
+    ini_set('session.use_cookies', 0);
+    ini_set('session.use_only_cookies', 0);
+    ini_set('session.use_trans_sid', 0);
+
     session_start();
 }
 
