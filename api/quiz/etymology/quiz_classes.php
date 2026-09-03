@@ -222,10 +222,11 @@ function generate_etymology_question($mysqli, $quiz) {
 
 function question_to_array($question) {
     return [
-        'number'  => $question->myid,
-        'word'    => $question->word,
-        'gloss'   => $question->gloss,
-        'options' => $question->options,
+        'number'       => $question->myid,
+        'word'         => $question->word,
+        'gloss'        => $question->gloss,
+        'options'      => $question->options,
+        'optionValues' => $question->options, // Etymology matches by text, so value == label
     ];
 }
 
