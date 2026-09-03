@@ -333,22 +333,25 @@ function build_pos_prompt($question) {
     $prompt = "The Palauan word " . $question->pal . " is a " . $question->pos .
               " meaning " . $question->eng . ".\n\n";
     $prompt .= "Please type the " . $question->apos . " form of " . $question->pal . ".";
-
-    if (!empty($question->examples)) {
-        $prompt .= "\n\nFor example:\n";
-        foreach ($question->examples as $ex) {
-            $prompt .= "- " . $ex['two'] . " is the " . $question->apos . " form of " . $ex['one'] . "\n";
-        }
-        $prompt = rtrim($prompt);
-    }
-
     return $prompt;
+}
+
+function build_pos_examples_text($question) {
+    if (empty($question->examples)) {
+        return '';
+    }
+    $text = "For example:\n";
+    foreach ($question->examples as $ex) {
+        $text .= "- " . $ex['two'] . " is the " . $question->apos . " form of " . $ex['one'] . "\n";
+    }
+    return rtrim($text);
 }
 
 function question_to_array($question) {
     return [
         'number'     => $question->myid,
         'prompt'     => build_pos_prompt($question),
+        'examples'   => build_pos_examples_text($question),
         'answerType' => 'text',
     ];
 }
