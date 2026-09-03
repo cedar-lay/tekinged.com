@@ -256,9 +256,10 @@ function generate_question($mysqli, $quiz) {
 
 function question_to_array($question) {
     return [
-        'number'  => $question->myid,
-        'word'    => $question->question,
-        'options' => $question->answers,
+        'number'       => $question->myid,
+        'word'         => $question->question,
+        'options'      => $question->answers,
+        'optionValues' => $question->answers, // Vocab matches by text, so value == label
     ];
 }
 
