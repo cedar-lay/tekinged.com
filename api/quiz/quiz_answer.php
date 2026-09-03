@@ -51,13 +51,14 @@ $status->addAnswer($score);
 quizlog($mysqli, $pword, $score);
 
 $response = [
-    'correct'       => $isCorrect,
-    'yourAnswer'    => $answer,
-    'correctAnswer' => $correctAnswer,
-    'word'          => $pword,
-    'progress'      => progress_to_array($status),
-    'done'          => ($status->remaining() <= 0),
-    'nextQuestion'  => null,
+    'correct'             => $isCorrect,
+    'yourAnswerValue'     => $answer,
+    'correctAnswerValue'  => $correctAnswer,
+    'correctAnswerLabel'  => $correctAnswer, // same as value for this quiz type
+    'word'                => $pword,
+    'progress'            => progress_to_array($status),
+    'done'                => ($status->remaining() <= 0),
+    'nextQuestion'        => null,
 ];
 
 if ($status->remaining() > 0) {
