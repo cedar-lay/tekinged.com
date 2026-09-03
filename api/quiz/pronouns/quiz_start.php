@@ -25,6 +25,7 @@ $_SESSION['qstatus'] = $status;
 $_SESSION['question'] = $question;
 
 echo json_encode([
+    'sessionToken' => session_id(),
     'question' => question_to_array($question),
     'progress' => progress_to_array($status),
 ]);
