@@ -79,6 +79,7 @@ if (!$id_result) {
 $entries = [];
 $roots = [];
 $root_stmt = $mysqli->prepare("SELECT pal, pos, eng, pdef, origin, stem, id, oword FROM all_words3 WHERE id = ?");
+$stem_pal_stmt = $mysqli->prepare("SELECT pal FROM all_words3 WHERE id = ?");
 
 while ($id_row = $id_result->fetch_assoc()) {
     $id = $id_row['id'];
@@ -91,7 +92,20 @@ while ($id_row = $id_result->fetch_assoc()) {
 
     $audio_url = word_audio_url($root_row['id']);
 
-    if (!$root_row['stem'] || $root_row['id'] == $root_row['stem']) {
+    // Matches the legacy get_words()'s !group branch exactly: a non-root
+    // word gets exactly ONE cross-reference added, pointing back to its own
+    // stem/root word (via AddCf($row['stem']) -> id_to_pword() -> Cf, which
+    // uppercases the displayed word). A root word gets no cfs at all.
+    $cfs = [];
+    if ($root_row['stem'] && $root_row['id'] != $root_row['stem']) {
+        $stem_id = $root_row['stem'];
+        $stem_pal_stmt->bind_param('i', $stem_id);
+        $stem_pal_stmt->execute();
+        $stem_row = $stem_pal_stmt->get_result()->fetch_assoc();
+        if ($stem_row) {
+            $cfs[] = ['id' => (int) $stem_id, 'pal' => strtoupper($stem_row['pal'])];
+        }
+    } else {
         $roots[$root_row['id']] = true;
     }
 
@@ -104,6 +118,7 @@ while ($id_row = $id_result->fetch_assoc()) {
         'origin'    => origin_label($root_row['origin'], $root_row['oword']),
         'has_audio' => $audio_url !== null,
         'audio_url' => $audio_url,
+        'cfs'       => $cfs,
         'stem'      => $root_row['stem'],
     ];
 }
