@@ -35,19 +35,21 @@ if ($mysqli->connect_error) {
 }
 
 // Whitelist sort fields against actual column names — never interpolate a
-// raw $_GET value into ORDER BY.
-$allowed_sorts = ['title', 'author', 'year', 'category', 'grade', 'html', 'pdf', 'ebook', 'purchase'];
+// raw $_GET value into ORDER BY. 'html' removed along with the Browse
+// column, which was dropped since its links point at a viewer page that
+// isn't part of this rebuild (would be broken once live).
+$allowed_sorts = ['title', 'author', 'year', 'category', 'grade', 'pdf', 'ebook', 'purchase'];
 $sort = $_GET['sort'] ?? 'title';
 if (!in_array($sort, $allowed_sorts, true)) {
     $sort = 'title';
 }
 
 // Matches the ORIGINAL exactly, confirmed intentional: title/author/category/
-// grade sort ascending (alphabetical). Year/html/pdf/ebook/purchase sort
+// grade sort ascending (alphabetical). year/pdf/ebook/purchase sort
 // DESCENDING — not arbitrary: MySQL sorts NULL last in DESC order, so this
-// pushes books that actually HAVE a PDF/ebook/purchase link/browse link (or
-// a more recent year) to the top, and blanks to the bottom. This is a
-// deliberate presence-first sort, not a bug — do not "fix" to plain ASC.
+// pushes books that actually HAVE a PDF/ebook/purchase link (or a more
+// recent year) to the top, and blanks to the bottom. Deliberate
+// presence-first sort, not a bug — do not "fix" to plain ASC.
 $order = in_array($sort, ['title', 'author', 'category', 'grade'], true) ? 'ASC' : 'DESC';
 
 $filter = $_GET['filter'] ?? null;
@@ -84,7 +86,6 @@ while ($row = $result->fetch_assoc()) {
         'year'     => $row['year'],
         'category' => $row['category'],
         'grade'    => $row['grade'],
-        'html'     => $row['html'] ?: null,
         'pdf'      => $pdf_url,
         'ebook'    => $row['ebook'] ?: null,
         'purchase' => $row['purchase'] ?: null,
