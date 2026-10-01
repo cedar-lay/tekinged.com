@@ -35,6 +35,24 @@ function json_error($message, $code = 400) {
     exit;
 }
 
+/**
+ * Same fix as api/books.php: 'ebook'/'purchase' can be stored as a path
+ * relative to production (e.g. "books/epubs/Foo.epub"), which resolves
+ * against whatever domain the PAGE is loaded from (tekinged.webflow.io)
+ * rather than tekinged.com if passed through as-is. Normalize to an
+ * absolute tekinged.com URL; leave already-absolute (http/https) values
+ * untouched.
+ */
+function absolute_production_url($value) {
+    if (!$value) {
+        return null;
+    }
+    if (stripos($value, 'http://') === 0 || stripos($value, 'https://') === 0) {
+        return $value;
+    }
+    return 'https://tekinged.com/' . ltrim($value, '/');
+}
+
 $mysqli = new mysqli($db_host, $db_user, $db_pwd, $database);
 if ($mysqli->connect_error) {
     json_error('Database connection failed', 500);
@@ -75,7 +93,11 @@ $categories = [];
 $entries = [];
 
 while ($row = $result->fetch_assoc()) {
-    if (!in_array($row['category'], $categories, true)) {
+    // Skip null/blank categories entirely — they shouldn't create a
+    // "filter to nothing" option in the dropdown. A row with no category
+    // still appears in the unfiltered table; it just never gets its own
+    // filter entry.
+    if ($row['category'] !== null && $row['category'] !== '' && !in_array($row['category'], $categories, true)) {
         $categories[] = $row['category'];
     }
 
@@ -91,8 +113,8 @@ while ($row = $result->fetch_assoc()) {
         'year'     => $row['year'],
         'category' => $row['category'],
         'pdf'      => $pdf_url,
-        'ebook'    => $row['ebook'] ?: null,
-        'purchase' => $row['purchase'] ?: null,
+        'ebook'    => absolute_production_url($row['ebook']),
+        'purchase' => absolute_production_url($row['purchase']),
     ];
 }
 
