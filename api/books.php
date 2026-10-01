@@ -29,6 +29,27 @@ function json_error($message, $code = 400) {
     exit;
 }
 
+/**
+ * The `ebook` and `purchase` DB columns can hold either a fully-qualified
+ * URL (most 'purchase' links, e.g. straight to Amazon) or a path relative
+ * to the production site (most 'ebook' links, e.g. "books/epubs/Foo.epub").
+ * Passed straight through as-is, a relative path resolves against whatever
+ * domain the PAGE is loaded from — tekinged.webflow.io, not tekinged.com —
+ * which is exactly why the ePub links were breaking. This normalizes any
+ * non-absolute value into a real tekinged.com URL, the same way $pdf_url
+ * below was already being built explicitly. Already-absolute values
+ * (http:// or https://) are left untouched.
+ */
+function absolute_production_url($value) {
+    if (!$value) {
+        return null;
+    }
+    if (stripos($value, 'http://') === 0 || stripos($value, 'https://') === 0) {
+        return $value;
+    }
+    return 'https://tekinged.com/' . ltrim($value, '/');
+}
+
 $mysqli = new mysqli($db_host, $db_user, $db_pwd, $database);
 if ($mysqli->connect_error) {
     json_error('Database connection failed', 500);
@@ -87,8 +108,8 @@ while ($row = $result->fetch_assoc()) {
         'category' => $row['category'],
         'grade'    => $row['grade'],
         'pdf'      => $pdf_url,
-        'ebook'    => $row['ebook'] ?: null,
-        'purchase' => $row['purchase'] ?: null,
+        'ebook'    => absolute_production_url($row['ebook']),
+        'purchase' => absolute_production_url($row['purchase']),
     ];
 }
 
